@@ -1,32 +1,310 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IMC</title>
-  <link rel="stylesheet" href="style.css">
+
+  <title>Controle de Contas</title>
+  <style>
+    body {
+  font-family: Arial, sans-serif;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+#form-lancamento {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 5px;
+}
+
+#form-lancamento input,
+#form-lancamento select,
+#form-lancamento button {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+#form-lancamento button {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+#tabela {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  overflow-x: auto;
+}
+
+#tabela th, #tabela td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  word-break: break-word;
+}
+
+#tabela th {
+  background-color: #f2f2f2;
+}
+
+#tabela button {
+  padding: 5px 10px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#margem {
+  margin-top: 20px;
+  padding: 10px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.positivo {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.negativo {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+/* 🔽 Media Query para telas menores que 600px */
+@media (max-width: 600px) {
+  #form-lancamento {
+    grid-template-columns: 1fr;
+  }
+
+  #tabela, #tabela thead, #tabela tbody, #tabela th, #tabela td, #tabela tr {
+    display: block;
+    width: 100%;
+  }
+
+  #tabela tr {
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  #tabela td {
+    padding-left: 50%;
+    position: relative;
+  }
+
+  #tabela td::before {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 45%;
+    padding-right: 10px;
+    white-space: nowrap;
+    font-weight: bold;
+  }
+
+  #tabela td:nth-child(1)::before { content: "Tipo"; }
+  #tabela td:nth-child(2)::before { content: "Categoria"; }
+  #tabela td:nth-child(3)::before { content: "Valor"; }
+  #tabela td:nth-child(4)::before { content: "Mês"; }
+  #tabela td:nth-child(5)::before { content: "Descrição"; }
+  #tabela td:nth-child(6)::before { content: "Ações"; }
+
+  #tabela thead {
+    display: none;
+  }
+}
+
+  </style>
 </head>
 <body>
-  <main>
-    <h2>Felipe Dias Apresenta</h2>
-    <h2>Cálculo IMC</h2>
-    <div class="divAltura">
-      <label for="altura">Altura (M)</label>
-      <input type="number" id="altura" />
-    </div>
-    <div class="divPeso">
-      <label for="peso">Peso (KG)</label>
-      <input type="number" id="peso" />
-    </div>
 
-    <div class="divCalc">
-      <button onclick="calcIMC()">Calcular</button>
-    </div>
-    
-    <span id="resultado"></span>
-  </main>
+  <h2>Cadastro de Receitas e Despesas</h2>
 
-  <script src="script.js"></script>
+  <form id="form-lancamento">
+    <select id="tipo" required>
+      <option value="">Selecione o tipo</option>
+      <option value="Receita">Receita</option>
+      <option value="Despesa">Despesa</option>
+    </select>
+    <input type="text" id="categoria" placeholder="Categoria" required>
+    <input type="number" id="valor" placeholder="Valor" step="0.01" required>
+    <input type="month" id="mes" required>
+    <input type="text" id="descricao" placeholder="Descrição" required>
+    <button type="submit">Cadastrar</button>
+  </form>
+
+  <table id="tabela">
+    <thead>
+      <tr>
+        <th>Tipo</th><th>Categoria</th><th>Valor</th><th>Mês</th><th>Descrição</th><th>Ações</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="margem" class="positivo">Margem: R$ 0.00</div>
+
+  <script>
+    // Configurações da planilha
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxAySOZYX6L_TTX5c81jfoR2-xzIKWIh9XscBw_h3pqWUDJlVR-NNNG3MoqA5V7TDuWAQ/exec';
+    const dados = []; // Array para armazenar os dados localmente
+
+    // Elementos do DOM
+    const form = document.getElementById('form-lancamento');
+    const tabela = document.querySelector('#tabela tbody');
+    const margemEl = document.getElementById('margem');
+
+    // Carrega os dados ao abrir a página
+    document.addEventListener('DOMContentLoaded', carregarDados);
+
+    // Função para carregar dados da planilha
+    async function carregarDados() {
+      try {
+        const response = await fetch(`${SCRIPT_URL}?acao=carregar`);
+        
+        if (!response.ok) {
+          throw new Error(`Erro HTTP: ${response.status}`);
+        }
+        
+        const dadosPlanilha = await response.json();
+        
+        // Limpa os arrays e tabela
+        dados.length = 0;
+        tabela.innerHTML = '';
+        
+        // Adiciona os dados
+        dadosPlanilha.forEach((dado, index) => {
+          dados.push(dado);
+          adicionarLinhaNaTabela(dado, index);
+        });
+        
+        atualizarMargem();
+        
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+        alert(`Erro ao carregar dados: ${error.message}`);
+      }
+    }
+
+    // Submete novo lançamento
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const tipo = document.getElementById('tipo').value;
+      const categoria = document.getElementById('categoria').value;
+      const valor = parseFloat(document.getElementById('valor').value);
+      const mes = document.getElementById('mes').value;
+      const descricao = document.getElementById('descricao').value;
+
+      const novoDado = { 
+        tipo, 
+        categoria, 
+        valor, 
+        mes, 
+        descricao
+      };
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `acao=adicionar&dados=${encodeURIComponent(JSON.stringify(novoDado))}`
+        });
+
+        const result = await response.text();
+        console.log('Resposta do servidor:', result);
+        
+        try {
+          const data = JSON.parse(result);
+          if (data.success) {
+            await carregarDados(); // Recarrega todos os dados para garantir sincronização
+            form.reset();
+          } else {
+            throw new Error(data.message || 'Falha ao adicionar dado');
+          }
+        } catch (e) {
+          throw new Error(result || 'Resposta inválida do servidor');
+        }
+      } catch (error) {
+        console.error('Erro ao adicionar lançamento:', error);
+        alert(`Erro ao adicionar lançamento: ${error.message}`);
+      }
+    });
+
+    // Adiciona linha à tabela
+    function adicionarLinhaNaTabela(dado, index) {
+      const linha = tabela.insertRow();
+      linha.innerHTML = `
+        <td>${dado.tipo}</td>
+        <td>${dado.categoria}</td>
+        <td>R$ ${dado.valor.toFixed(2)}</td>
+        <td>${dado.mes}</td>
+        <td>${dado.descricao}</td>
+        <td><button onclick="excluirLinha(${index})">Excluir</button></td>
+      `;
+    }
+
+    // Função global para excluir linha
+    window.excluirLinha = async function(index) {
+      if (!confirm('Tem certeza que deseja excluir este lançamento?')) return;
+      
+      const dado = dados[index];
+      if (!dado) return;
+
+      try {
+        const response = await fetch(SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `acao=excluir&index=${encodeURIComponent(index)}`
+        });
+
+        const result = await response.text();
+        const data = JSON.parse(result);
+        
+        if (data.success) {
+          await carregarDados(); // Recarrega todos os dados para garantir sincronização
+        } else {
+          throw new Error(data.message || 'Falha ao excluir dado');
+        }
+      } catch (error) {
+        console.error('Erro ao excluir lançamento:', error);
+        alert(`Erro ao excluir lançamento: ${error.message}`);
+      }
+    };
+
+    // Calcula a margem (receitas - despesas)
+    function atualizarMargem() {
+      let totalReceita = 0;
+      let totalDespesa = 0;
+      
+      dados.forEach(d => {
+        if (d.tipo === 'Receita') {
+          totalReceita += parseFloat(d.valor);
+        } else if (d.tipo === 'Despesa') {
+          totalDespesa += parseFloat(d.valor);
+        }
+      });
+      
+      const margem = totalReceita - totalDespesa;
+      margemEl.textContent = `Margem: R$ ${margem.toFixed(2)}`;
+      
+      // Atualiza a classe CSS
+      margemEl.className = margem >= 0 ? 'positivo' : 'negativo';
+    }
+  </script>
 </body>
 </html>
