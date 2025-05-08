@@ -162,7 +162,12 @@
     <tbody></tbody>
   </table>
 
-  <div id="margem" class="positivo">Margem: R$ 0.00</div>
+  <div id="margem" class="positivo">
+    <div id="total-receitas">Total de Receitas: R$ 0.00</div>
+    <div id="total-despesas">Total de Despesas: R$ 0.00</div>
+    <div id="valor-margem">Margem: R$ 0.00</div>
+  </div>
+  
 
   <script>
     // Configurações da planilha
@@ -294,23 +299,30 @@
 
     // Calcula a margem (receitas - despesas)
     function atualizarMargem() {
-      let totalReceita = 0;
-      let totalDespesa = 0;
-      
-      dados.forEach(d => {
-        if (d.tipo === 'Receita') {
-          totalReceita += parseFloat(d.valor);
-        } else if (d.tipo === 'Despesa') {
-          totalDespesa += parseFloat(d.valor);
-        }
-      });
-      
-      const margem = totalReceita - totalDespesa;
-      margemEl.textContent = `Margem: R$ ${margem.toFixed(2)}`;
-      
-      // Atualiza a classe CSS
-      margemEl.className = margem >= 0 ? 'positivo' : 'negativo';
+  let totalReceita = 0;
+  let totalDespesa = 0;
+
+  dados.forEach(d => {
+    const valor = parseFloat(d.valor);
+    if (d.tipo === 'Receita') {
+      totalReceita += valor;
+    } else if (d.tipo === 'Despesa') {
+      totalDespesa += valor;
     }
+  });
+
+  const margem = totalReceita - totalDespesa;
+
+  // Atualiza os valores na tela
+  document.getElementById('total-receitas').textContent = `Total de Receitas: R$ ${totalReceita.toFixed(2)}`;
+  document.getElementById('total-despesas').textContent = `Total de Despesas: R$ ${totalDespesa.toFixed(2)}`;
+  document.getElementById('valor-margem').textContent = `Margem: R$ ${margem.toFixed(2)}`;
+
+  // Atualiza a classe visual
+  const margemEl = document.getElementById('margem');
+  margemEl.className = margem >= 0 ? 'positivo' : 'negativo';
+}
+
   </script>
 </body>
 </html>
